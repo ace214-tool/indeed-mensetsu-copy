@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indeed 面接情報コピー（ブックマークレット）</title>
+<style>
+body{font-family:"Segoe UI","Hiragino Sans","Meiryo",sans-serif;max-width:760px;margin:40px auto;padding:0 20px;color:#222;line-height:1.7;}
+h1{font-size:22px;border-bottom:2px solid #2557a7;padding-bottom:6px;}
+h2{font-size:17px;margin-top:32px;}
+.btn{display:inline-block;background:#1a9d4b;color:#fff;font-weight:bold;font-size:18px;padding:14px 28px;border-radius:8px;text-decoration:none;cursor:grab;box-shadow:0 3px 8px rgba(0,0,0,.2);}
+.btn:hover{background:#15843e;}
+.note{background:#f4f7fb;border-left:4px solid #2557a7;padding:10px 14px;margin:14px 0;}
+ol li{margin-bottom:6px;}
+textarea{width:100%;box-sizing:border-box;font:12px/1.5 monospace;padding:8px;border:1px solid #bbb;border-radius:6px;}
+pre{background:#f6f6f6;padding:10px 12px;border-radius:6px;font-size:13px;white-space:pre-wrap;}
+small{color:#666;}
+</style>
+</head>
+<body>
+<h1>Indeed 面接情報コピー</h1>
+<p>Indeed（求人掲載側）の応募者ページで押すと、面接の予定情報を下の形式で抜き出してクリップボードにコピーします。</p>
+<pre>【タイトル】
+17:45～18:00TEL＠アポ面接
+
+【説明】
+坂根 海里
+東京都 台東区
+https://employers.indeed.com/candidates/view?...</pre>
+
+<h2>導入方法（1回だけ）</h2>
+<ol>
+<li>ブックマークバーを表示しておく（Chrome：<b>Ctrl + Shift + B</b>）</li>
+<li>下の緑のボタンを、ブックマークバーへ<b>ドラッグ＆ドロップ</b>する</li>
+</ol>
+<p style="margin:20px 0;"><a id="bm" class="btn" href="#">Indeed面接コピー</a></p>
+<div class="note">ドラッグできない場合：ブックマークバーで右クリック →「ページを追加」→ 名前は好きなもの、URL欄に下のコードを貼り付けて保存。</div>
+<textarea id="code" rows="4" readonly onclick="this.select()"></textarea>
+
+<h2>使い方</h2>
+<ol>
+<li>Indeedで応募者ページ（応募者を管理する → 応募者名をクリック）を開く</li>
+<li>ブックマークバーの「Indeed面接コピー」を押す</li>
+<li>右上にパネルが出る。「タイトル」は自動でコピー済みなので、カレンダーのタイトル欄にそのまま貼り付ける</li>
+<li>「説明」のコピーボタンを押して、カレンダーの説明欄に貼り付ける</li>
+</ol>
+<ul>
+<li>面接が「確定済み」以外のときや、電話面接以外のときは、パネルに赤字で注意が出ます</li>
+<li>取れなかった項目は「（氏名不明）」などと出るので、その場合は三澤まで連絡してください</li>
+</ul>
+
+<h2>更新について</h2>
+<p><small>このページのコードを更新したら、使う人はもう一度ボタンをブックマークバーへドラッグし直してください（古いブックマークは削除）。最終更新：2026/10/19</small></p>
+
+<script type="text/plain" id="src">
+(function(){
+var ID='ace-indeed-cal';
+var old=document.getElementById(ID);if(old)old.remove();
+var T=document.body.innerText||'';
+var L=T.split('\n').map(function(s){return s.replace(/^\s+|\s+$/g,'');}).filter(function(s){return s;});
+var PREF=/^(東京都|北海道|京都府|大阪府|[^\s]{2,3}県)(.*)$/;
+var warn=[];
+var i,j;
+
+var name='';
+var hs=document.querySelectorAll('h1');
+for(i=0;i<hs.length;i++){var t=(hs[i].innerText||'').replace(/^\s+|\s+$/g,'');if(t&&t.length<=30&&!/求人|応募者|Indeed/i.test(t)){name=t;break;}}
+
+var addr='',k=-1;
+for(i=0;i<L.length;i++){if(/^(Applied to|応募先)/i.test(L[i])){k=i;break;}}
+if(k>0){for(j=k-1;j>=Math.max(0,k-5);j--){if(PREF.test(L[j])){addr=L[j];if(!name&&j>0)name=L[j-1];break;}}}
+if(!addr){for(i=1;i<L.length;i++){if(/^[^\s@]+@[^\s@]+\.[A-Za-z]+$/.test(L[i])&&PREF.test(L[i-1])){addr=L[i-1];if(!name&&i>1)name=L[i-2];break;}}}
+
+var area='';
+var m=addr.match(PREF);
+if(m){var rest=m[2].replace(/^\s+/,'');var c=rest.match(/^(.+?郡.+?[町村]|.+?[市区町村]市?)/);area=m[1]+' '+(c?c[1]:rest);}
+else{area='（住所不明）';warn.push('住所が取れませんでした');}
+if(!name){name='（氏名不明）';warn.push('氏名が取れませんでした');}
+
+var type='',status='';
+for(i=1;i<L.length;i++){if(/^(確定済み|保留中|未確定|キャンセル|辞退)/.test(L[i])&&/面接$/.test(L[i-1])){type=L[i-1];status=L[i];break;}}
+var label;
+if(!type){label='TEL';warn.push('面接種別が見つからないので TEL にしました');}
+else if(/電話/.test(type)){label='TEL';}
+else{label=type.replace(/面接$/,'');warn.push('電話面接ではありません（'+type+'）');}
+if(status&&!/^確定済み/.test(status))warn.push('面接ステータスが「'+status+'」です');
+
+var dm=T.match(/(\d{1,2})月(\d{1,2})日[^\d]{0,6}(\d{1,2}):(\d{2})\s*[～〜~\-–]\s*(\d{1,2}):(\d{2})/);
+var title,dateStr='';
+if(dm){
+ title=dm[3]+':'+dm[4]+'～'+dm[5]+':'+dm[6]+label+'＠アポ面接';
+ var now=new Date(),y=now.getFullYear(),mo=+dm[1],d=+dm[2];
+ if(mo<now.getMonth()+1-6)y++;
+ var dt=new Date(y,mo-1,d);
+ dateStr=y+'/'+mo+'/'+d+'（'+'日月火水木金土'.charAt(dt.getDay())+'）';
+}else{title='（面接日時未取得）'+label+'＠アポ面接';warn.push('面接の日時が見つかりません');}
+var desc=name+'\n'+area+'\n'+location.href;
+
+function esc(s){return String(s).replace(/[&<>"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch];});}
+var TA='width:100%;box-sizing:border-box;font:13px/1.5 monospace;padding:8px;border:1px solid #bbb;border-radius:6px;resize:vertical;';
+var BT='background:#2557a7;color:#fff;border:0;border-radius:6px;padding:7px 14px;font-size:14px;cursor:pointer;';
+function box(key,lbl,rows){
+ return '<div style="margin-top:10px;">'
+  +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><b>'+lbl+'</b>'
+  +'<button id="'+ID+'-cp-'+key+'" style="'+BT+'">コピー</button></div>'
+  +'<textarea id="'+ID+'-ta-'+key+'" rows="'+rows+'" style="'+TA+'"></textarea></div>';
+}
+var P=document.createElement('div');P.id=ID;
+P.style.cssText='position:fixed;top:16px;right:16px;z-index:2147483647;width:460px;max-width:calc(100vw - 32px);background:#fff;color:#222;border:2px solid #2557a7;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);font:14px/1.5 sans-serif;padding:14px 16px;box-sizing:border-box;text-align:left;';
+var html='<div style="display:flex;align-items:center;justify-content:space-between;"><b style="font-size:15px;">Indeed 面接情報コピー</b>'
+ +'<button id="'+ID+'-cl" style="background:#eee;color:#333;border:0;border-radius:6px;padding:5px 12px;font-size:13px;cursor:pointer;">閉じる</button></div>';
+if(dateStr)html+='<div style="margin-top:4px;">面接日：<b>'+esc(dateStr)+'</b>'+(type?'　'+esc(type):'')+(status?'（'+esc(status)+'）':'')+'</div>';
+if(warn.length)html+='<div style="color:#c00;margin-top:4px;">'+warn.map(function(w){return '・'+esc(w);}).join('<br>')+'</div>';
+html+=box('t','タイトル',1)+box('d','説明',3);
+P.innerHTML=html;
+document.body.appendChild(P);
+function wire(key,val){
+ var ta=document.getElementById(ID+'-ta-'+key),cp=document.getElementById(ID+'-cp-'+key);
+ ta.value=val;
+ function done(){cp.textContent='コピーしました';setTimeout(function(){cp.textContent='コピー';},1500);}
+ function copy(){
+  ta.focus();ta.select();
+  var ok=false;
+  try{ok=document.execCommand('copy');}catch(e){}
+  if(ok){done();return;}
+  if(navigator.clipboard){navigator.clipboard.writeText(ta.value).then(done,function(){});}
+ }
+ cp.addEventListener('click',copy);
+ return copy;
+}
+var copyTitle=wire('t',title);
+wire('d',desc);
+document.getElementById(ID+'-cl').addEventListener('click',function(){P.remove();});
+copyTitle();
+})();
+</script>
+<script>
+(function(){
+  var code=document.getElementById("src").textContent.trim();
+  var href="javascript:"+encodeURIComponent(code);
+  document.getElementById("bm").setAttribute("href",href);
+  document.getElementById("code").value=href;
+  document.getElementById("bm").addEventListener("click",function(e){e.preventDefault();alert("このボタンはクリックではなく、ブックマークバーへドラッグしてください。");});
+})();
+</script>
+</body>
+</html>
