@@ -50,7 +50,7 @@ https://employers.indeed.com/candidates/view?...</pre>
 </ul>
 
 <h2>更新について</h2>
-<p><small>このページのコードを更新したら、使う人はもう一度ボタンをブックマークバーへドラッグし直してください（古いブックマークは削除）。最終更新：2026/10/19</small></p>
+<p><small>このページのコードを更新したら、使う人はもう一度ボタンをブックマークバーへドラッグし直してください（古いブックマークは削除）。最終更新：2026/11/9</small></p>
 
 <script type="text/plain" id="src">
 (function(){
@@ -77,22 +77,40 @@ if(m){var rest=m[2].replace(/^\s+/,'');var c=rest.match(/^(.+?郡.+?[町村]|.+?
 else{area='（住所不明）';warn.push('住所が取れませんでした');}
 if(!name){name='（氏名不明）';warn.push('氏名が取れませんでした');}
 
-var type='',status='';
-for(i=1;i<L.length;i++){if(/^(確定済み|保留中|未確定|キャンセル|辞退)/.test(L[i])&&/面接$/.test(L[i-1])){type=L[i-1];status=L[i];break;}}
+/* 面接カードを全部拾う（「○○面接」の次行がステータス）。確定済みを最優先 */
+var STAT=/^(確定済み|応募者からの確認待ち|保留中|未確定|キャンセル|辞退|完了)/;
+var cards=[];
+for(i=1;i<L.length;i++){if(/面接$/.test(L[i-1])&&STAT.test(L[i])){cards.push({type:L[i-1],status:L[i],idx:i});}}
+var card=null;
+for(i=0;i<cards.length;i++){if(/^確定済み/.test(cards[i].status)){card=cards[i];break;}}
+if(!card&&cards.length)card=cards[0];
+var type=card?card.type:'',status=card?card.status:'';
 var label;
 if(!type){label='TEL';warn.push('面接種別が見つからないので TEL にしました');}
 else if(/電話/.test(type)){label='TEL';}
 else{label=type.replace(/面接$/,'');warn.push('電話面接ではありません（'+type+'）');}
-if(status&&!/^確定済み/.test(status))warn.push('面接ステータスが「'+status+'」です');
+if(status&&!/^確定済み/.test(status))warn.push('確定済みの面接がありません（'+status+'）');
 
-var dm=T.match(/(\d{1,2})月(\d{1,2})日[^\d]{0,6}(\d{1,2}):(\d{2})\s*[～〜~\-–]\s*(\d{1,2}):(\d{2})/);
+/* 日時：確定済みカードの直後の行から探す。見つからなければページ全体 */
+var TIME=/(\d{1,2}):(\d{2})\s*[～〜~\-–]\s*(\d{1,2}):(\d{2})/;
+var DATE=/(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日|今日|明日|明後日|([日月火水木金土])曜/;
+var tline='';
+if(card){for(j=card.idx+1;j<Math.min(L.length,card.idx+6);j++){if(TIME.test(L[j])){tline=L[j];break;}}}
+if(!tline){for(i=0;i<L.length;i++){if(TIME.test(L[i])&&DATE.test(L[i])){tline=L[i];break;}}}
 var title,dateStr='';
-if(dm){
- title=dm[3]+':'+dm[4]+'～'+dm[5]+':'+dm[6]+label+'＠アポ面接';
- var now=new Date(),y=now.getFullYear(),mo=+dm[1],d=+dm[2];
- if(mo<now.getMonth()+1-6)y++;
- var dt=new Date(y,mo-1,d);
- dateStr=y+'/'+mo+'/'+d+'（'+'日月火水木金土'.charAt(dt.getDay())+'）';
+var tm=tline.match(TIME);
+if(tm){
+ title=tm[1]+':'+tm[2]+'～'+tm[3]+':'+tm[4]+label+'＠アポ面接';
+ var now=new Date(),dt=null,dmm=tline.match(DATE);
+ if(dmm){
+  if(dmm[2]){var y=dmm[1]?+dmm[1]:now.getFullYear(),mo=+dmm[2],d=+dmm[3];if(!dmm[1]&&mo<now.getMonth()+1-6)y++;dt=new Date(y,mo-1,d);}
+  else if(/今日/.test(dmm[0]))dt=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  else if(/明後日/.test(dmm[0]))dt=new Date(now.getFullYear(),now.getMonth(),now.getDate()+2);
+  else if(/明日/.test(dmm[0]))dt=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+  else if(dmm[4]){var wd='日月火水木金土'.indexOf(dmm[4]),diff=(wd-now.getDay()+7)%7;dt=new Date(now.getFullYear(),now.getMonth(),now.getDate()+diff);}
+ }
+ if(dt)dateStr=dt.getFullYear()+'/'+(dt.getMonth()+1)+'/'+dt.getDate()+'（'+'日月火水木金土'.charAt(dt.getDay())+'）';
+ else warn.push('面接日（何日か）が読み取れませんでした。時間だけ取得');
 }else{title='（面接日時未取得）'+label+'＠アポ面接';warn.push('面接の日時が見つかりません');}
 var desc=name+'\n'+area+'\n'+location.href;
 
