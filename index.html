@@ -27,6 +27,11 @@ small{color:#666;}
 坂根 海里
 東京都 台東区
 https://employers.indeed.com/candidates/view?...</pre>
+<p>タイトルの「アポ」の部分は、応募先の求人名で自動で切り替わります。</p>
+<ul>
+<li>コールセンター・テレアポの求人 → <b>アポ面接</b></li>
+<li>伐採・剪定・庭木など職人の求人 → <b>職人面接</b></li>
+</ul>
 
 <h2>導入方法（1回だけ）</h2>
 <ol>
@@ -50,7 +55,7 @@ https://employers.indeed.com/candidates/view?...</pre>
 </ul>
 
 <h2>更新について</h2>
-<p><small>このページのコードを更新したら、使う人はもう一度ボタンをブックマークバーへドラッグし直してください（古いブックマークは削除）。最終更新：2026/11/9</small></p>
+<p><small>このページのコードを更新したら、使う人はもう一度ボタンをブックマークバーへドラッグし直してください（古いブックマークは削除）。最終更新：2026/11/12</small></p>
 
 <script type="text/plain" id="src">
 (function(){
@@ -77,6 +82,16 @@ if(m){var rest=m[2].replace(/^\s+/,'');var c=rest.match(/^(.+?郡.+?[町村]|.+?
 else{area='（住所不明）';warn.push('住所が取れませんでした');}
 if(!name){name='（氏名不明）';warn.push('氏名が取れませんでした');}
 
+/* 応募先の求人名から見出しの職種（アポ／職人）を決める。求人が増えたら JOBS に1行足す */
+var JOBS=[
+ [/伐採|剪定|庭木|植木|造園|職人/,'職人'],
+ [/コールセンター|テレアポ|アポインター/,'アポ']
+];
+var job='',kind='';
+if(k>=0){job=(L[k]+' '+(L[k+1]||'')).replace(/^(Applied to|応募先)\s*[:：]?\s*/i,'');}
+for(i=0;i<JOBS.length;i++){if(JOBS[i][0].test(job)){kind=JOBS[i][1];break;}}
+if(!kind){kind='アポ';warn.push(job?'求人名から職種を判別できないので「アポ」にしました':'応募先の求人名が取れないので「アポ」にしました');}
+
 /* 面接カードを全部拾う（「○○面接」の次行がステータス）。確定済みを最優先 */
 var STAT=/^(確定済み|応募者からの確認待ち|保留中|未確定|キャンセル|辞退|完了)/;
 var cards=[];
@@ -100,7 +115,7 @@ if(!tline){for(i=0;i<L.length;i++){if(TIME.test(L[i])&&DATE.test(L[i])){tline=L[
 var title,dateStr='';
 var tm=tline.match(TIME);
 if(tm){
- title=tm[1]+':'+tm[2]+'～'+tm[3]+':'+tm[4]+label+'＠アポ面接';
+ title=tm[1]+':'+tm[2]+'～'+tm[3]+':'+tm[4]+label+'＠'+kind+'面接';
  var now=new Date(),dt=null,dmm=tline.match(DATE);
  if(dmm){
   if(dmm[2]){var y=dmm[1]?+dmm[1]:now.getFullYear(),mo=+dmm[2],d=+dmm[3];if(!dmm[1]&&mo<now.getMonth()+1-6)y++;dt=new Date(y,mo-1,d);}
@@ -111,7 +126,7 @@ if(tm){
  }
  if(dt)dateStr=dt.getFullYear()+'/'+(dt.getMonth()+1)+'/'+dt.getDate()+'（'+'日月火水木金土'.charAt(dt.getDay())+'）';
  else warn.push('面接日（何日か）が読み取れませんでした。時間だけ取得');
-}else{title='（面接日時未取得）'+label+'＠アポ面接';warn.push('面接の日時が見つかりません');}
+}else{title='（面接日時未取得）'+label+'＠'+kind+'面接';warn.push('面接の日時が見つかりません');}
 var desc=name+'\n'+area+'\n'+location.href;
 
 function esc(s){return String(s).replace(/[&<>"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch];});}
@@ -128,6 +143,7 @@ P.style.cssText='position:fixed;top:16px;right:16px;z-index:2147483647;width:460
 var html='<div style="display:flex;align-items:center;justify-content:space-between;"><b style="font-size:15px;">Indeed 面接情報コピー</b>'
  +'<button id="'+ID+'-cl" style="background:#eee;color:#333;border:0;border-radius:6px;padding:5px 12px;font-size:13px;cursor:pointer;">閉じる</button></div>';
 if(dateStr)html+='<div style="margin-top:4px;">面接日：<b>'+esc(dateStr)+'</b>'+(type?'　'+esc(type):'')+(status?'（'+esc(status)+'）':'')+'</div>';
+if(job)html+='<div style="margin-top:4px;">見出し：<b>'+esc(kind)+'面接</b>　<span style="color:#666;font-size:12px;">'+esc(job.slice(0,40))+'</span></div>';
 if(warn.length)html+='<div style="color:#c00;margin-top:4px;">'+warn.map(function(w){return '・'+esc(w);}).join('<br>')+'</div>';
 html+=box('t','タイトル',1)+box('d','説明',3);
 P.innerHTML=html;
